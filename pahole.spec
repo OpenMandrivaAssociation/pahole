@@ -9,6 +9,7 @@ Source0:	pahole-1.18.tar.xz
 # (revision id is from pahole's submodules)
 Source1:	libbpf-e5dbc1a96f138e7c47324a65269adff0ca0f4f6e.tar.xz
 License:	GPLv2+
+Provides:	dwarves = %{EVRD}
 BuildRequires:	cmake
 BuildRequires:	ninja
 BuildRequires:	pkgconfig(libelf)
