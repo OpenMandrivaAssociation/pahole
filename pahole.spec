@@ -1,24 +1,25 @@
-Name:		pahole
-Version:	1.18
-Release:	1
-Summary:	Tool that shows data structure layouts encoded in debugging information
-# https://git.kernel.org/pub/scm/devel/pahole/pahole.git
-Source0:	pahole-1.18.tar.xz
-# https://github.com/libbpf/libbpf
-# git archive -o ../libbpf-e5dbc1a96f138e7c47324a65269adff0ca0f4f6e.tar --prefix=lib/bpf/ e5dbc1a96f138e7c47324a65269adff0ca0f4f6e
-# (revision id is from pahole's submodules)
-Source1:	libbpf-e5dbc1a96f138e7c47324a65269adff0ca0f4f6e.tar.xz
-License:	GPLv2+
-Provides:	dwarves = %{EVRD}
-BuildRequires:	cmake
-BuildRequires:	ninja
-BuildRequires:	pkgconfig(libelf)
-
 %define dwarvesdevel %mklibname -d dwarves
 %define major 1
 %define dwarveslib %mklibname dwarves %{major}
 %define dwarves_emitlib %mklibname dwarves_emit %{major}
 %define dwarves_reorganizelib %mklibname dwarves_reorganize %{major}
+
+Summary:	Tool that shows data structure layouts encoded in debugging information
+Name:		pahole
+Version:	1.20
+Release:	1
+Group:		Development/C
+# https://git.kernel.org/pub/scm/devel/pahole/pahole.git
+Source0:	%{name}-%{version}.tar.gz
+# https://github.com/libbpf/libbpf
+# git archive -o ../libbpf-986962fade5dfa89c2890f3854eb040d2a64ab3.tar --prefix=lib/bpf/ 986962fade5dfa89c2890f3854eb040d2a64ab3
+# (revision id is from pahole's submodules)
+Source1:	libbpf-986962fade5dfa89c2890f3854eb040d2a64ab3.tar.xz
+License:	GPLv2+
+Provides:	dwarves = %{EVRD}
+BuildRequires:	cmake
+BuildRequires:	ninja
+BuildRequires:	pkgconfig(libelf)
 
 %description
 pahole shows data structure layouts encoded in debugging information formats,
@@ -31,6 +32,7 @@ understanding a new codebase you have to work with.
 
 %package -n %{dwarvesdevel}
 Summary:	Development files for the dwarves library, a part of pahole
+Group:		Development/C
 
 %description -n %{dwarvesdevel}
 Development files for the dwarves library, a part of pahole
@@ -40,10 +42,10 @@ Development files for the dwarves library, a part of pahole
 %cmake -G Ninja
 
 %build
-cmake --build build
+%ninja_build -C build
 
 %install
-DESTDIR="%{buildroot}" cmake --install build
+%ninja_install -C build
 
 %libpackage dwarves %{major}
 %libpackage dwarves_emit %{major}
