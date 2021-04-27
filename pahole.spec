@@ -6,7 +6,7 @@
 
 Summary:	Tool that shows data structure layouts encoded in debugging information
 Name:		pahole
-Version:	1.20
+Version:	1.21
 Release:	1
 Group:		Development/C
 # https://git.kernel.org/pub/scm/devel/pahole/pahole.git
@@ -14,7 +14,7 @@ Source0:	%{name}-%{version}.tar.gz
 # https://github.com/libbpf/libbpf
 # git archive -o ../libbpf-986962fade5dfa89c2890f3854eb040d2a64ab3.tar --prefix=lib/bpf/ 986962fade5dfa89c2890f3854eb040d2a64ab3
 # (revision id is from pahole's submodules)
-Source1:	libbpf-986962fade5dfa89c2890f3854eb040d2a64ab3.tar.xz
+Source1:	libbpf-986962fade5dfa89c2890f3854eb040d2a64ab38.tar.xz
 License:	GPLv2+
 Provides:	dwarves = %{EVRD}
 BuildRequires:	cmake
