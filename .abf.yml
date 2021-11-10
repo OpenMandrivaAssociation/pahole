@@ -1,3 +1,3 @@
 sources:
-  libbpf-986962fade5dfa89c2890f3854eb040d2a64ab38.tar.xz: b52e467dec614dae1bd38ba33f40efdb916afc75
-  pahole-1.21.tar.gz: 714380d0703a4d42f49e1c938ad5907f5f6571d5
+  "libbpf-980777cc16db75d5628a537c892aefc2640bb242.tar.gz": ee95ef6425efbdf2f5529894defa0e3980c8f3d3
+  "pahole-1.22.tar.gz": cf0185bbbeba41cd1404f4d32b3be51bcc0c6ab8

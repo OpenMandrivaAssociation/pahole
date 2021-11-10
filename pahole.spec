@@ -6,15 +6,15 @@
 
 Summary:	Tool that shows data structure layouts encoded in debugging information
 Name:		pahole
-Version:	1.21
+Version:	1.22
 Release:	1
 Group:		Development/C
 # https://git.kernel.org/pub/scm/devel/pahole/pahole.git
 Source0:	%{name}-%{version}.tar.gz
-# https://github.com/libbpf/libbpf
-# git archive -o ../libbpf-986962fade5dfa89c2890f3854eb040d2a64ab3.tar --prefix=lib/bpf/ 986962fade5dfa89c2890f3854eb040d2a64ab3
+# git clone https://github.com/libbpf/libbpf.git && cd libbpf
+# git archive --format=tar.gz -o ../libbpf-980777cc16db75d5628a537c892aefc2640bb242.tar.gz --prefix=lib/bpf/ 980777cc16db75d5628a537c892aefc2640bb242
 # (revision id is from pahole's submodules)
-Source1:	libbpf-986962fade5dfa89c2890f3854eb040d2a64ab38.tar.xz
+Source1:	libbpf-980777cc16db75d5628a537c892aefc2640bb242.tar.gz
 License:	GPLv2+
 Provides:	dwarves = %{EVRD}
 BuildRequires:	cmake
@@ -37,6 +37,10 @@ Group:		Development/C
 %description -n %{dwarvesdevel}
 Development files for the dwarves library, a part of pahole
 
+%libpackage dwarves %{major}
+%libpackage dwarves_emit %{major}
+%libpackage dwarves_reorganize %{major}
+
 %prep
 %autosetup -p1 -a 1
 %cmake -G Ninja
@@ -46,10 +50,6 @@ Development files for the dwarves library, a part of pahole
 
 %install
 %ninja_install -C build
-
-%libpackage dwarves %{major}
-%libpackage dwarves_emit %{major}
-%libpackage dwarves_reorganize %{major}
 
 %files -n %{dwarvesdevel}
 %{_includedir}/dwarves
@@ -70,4 +70,4 @@ Development files for the dwarves library, a part of pahole
 %{_bindir}/scncopy
 %{_bindir}/syscse
 %{_datadir}/dwarves
-%{_mandir}/man1/pahole.1*
+%doc %{_mandir}/man1/pahole.1*
