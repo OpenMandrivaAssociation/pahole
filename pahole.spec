@@ -7,14 +7,12 @@
 Summary:	Tool that shows data structure layouts encoded in debugging information
 Name:		pahole
 Version:	1.24
-Release:	2
+Release:	3
 Group:		Development/C
 # https://git.kernel.org/pub/scm/devel/pahole/pahole.git
 Source0:	%{name}-%{version}.tar.gz
-# git clone https://github.com/libbpf/libbpf.git && cd libbpf
-# git archive --format=tar.gz -o ../libbpf-645500dd7d2d6b5bb76e4c0375d597d4f0c4814e.tar.gz --prefix=lib/bpf/ 645500dd7d2d6b5bb76e4c0375d597d4f0c4814e
 # (revision id is from pahole's submodules)
-Source1:	libbpf-645500dd7d2d6b5bb76e4c0375d597d4f0c4814e.tar.gz
+Source1:	https://github.com/libbpf/libbpf/archive/d73ecc91e1f9a2f2782e00f010a5a0d6abec09a4.tar.gz
 # Needed to make kernels compile with binutils >= 2.40
 # https://lore.kernel.org/all/YzwkazNc6wNCpQTN@kernel.org/t/
 Patch0:		pahole-fix-kernel-builds-with-binutils-2.40.patch
@@ -46,6 +44,8 @@ Development files for the dwarves library, a part of pahole
 
 %prep
 %autosetup -p1 -a 1
+rmdir lib/bpf
+mv libbpf-* lib/bpf
 %cmake -G Ninja
 
 %build
