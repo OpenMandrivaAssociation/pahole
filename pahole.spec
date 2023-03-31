@@ -4,7 +4,7 @@
 Summary:	Tool that shows data structure layouts encoded in debugging information
 Name:		pahole
 Version:	1.24
-Release:	5
+Release:	6
 Group:		Development/C
 License:	GPLv2+
 # https://git.kernel.org/pub/scm/devel/pahole/pahole.git
