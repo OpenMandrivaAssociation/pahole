@@ -1,0 +1,33 @@
+From bc1538dcb14bc4d9c8b5095b0de4e1b7f7e14fbb Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Thu, 1 Dec 2022 11:55:00 -0300
+Subject: [PATCH 31/55] pahole: Use type__fprintf() directly for --compile
+
+As we ne need to signal more options via a conf_fprintf variable, like
+the conf_fprintf.compilable knob.
+
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ pahole.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/pahole.c b/pahole.c
+index 6f4f87c..04b28c0 100644
+--- a/pahole.c
++++ b/pahole.c
+@@ -514,8 +514,10 @@ static void class_formatter(struct class *class, struct cu *cu, uint32_t id)
+ 		conf.prefix = conf.suffix = NULL;
+ 
+ 	if (compilable) {
+-		if (type__emit_definitions(tag, cu, &emissions, stdout))
+-			type__emit(tag, cu, NULL, NULL, stdout);
++		if (type__emit_definitions(tag, cu, &emissions, stdout)) {
++			tag__fprintf(tag, cu, &conf, stdout);
++			putchar(';');
++		}
+ 	} else {
+ 		tag__fprintf(tag, cu, &conf, stdout);
+ 	}
+-- 
+2.40.0.rc2
+

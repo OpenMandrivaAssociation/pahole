@@ -1,0 +1,47 @@
+From 6bb5a1fa990f5bd6b16355ef44afd8979aaaafb0 Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Thu, 13 Oct 2022 13:23:40 -0300
+Subject: [PATCH 20/55] emit: Allow skip emitting the atomic typedefs
+
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ dwarves.h      | 2 ++
+ dwarves_emit.c | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/dwarves.h b/dwarves.h
+index 9b7c922..589588e 100644
+--- a/dwarves.h
++++ b/dwarves.h
+@@ -91,6 +91,7 @@ struct conf_load {
+  * @suppress_force_paddings: This makes sense only if the debugging format has struct alignment information,
+  *                           So allow for it to be disabled and disable it automatically for things like BTF,
+  *                           that don't have such info.
++ * @skip_emitting_atomic_typedefs: Allow not emitting "typedef _Atomic int atomic_int;" and friends
+  */
+ struct conf_fprintf {
+ 	const char *prefix;
+@@ -129,6 +130,7 @@ struct conf_fprintf {
+ 	uint8_t	   classes_as_structs:1;
+ 	uint8_t	   hex_fmt:1;
+ 	uint8_t	   strip_inline:1;
++	uint8_t	   skip_emitting_atomic_typedefs:1;
+ };
+ 
+ struct cus;
+diff --git a/dwarves_emit.c b/dwarves_emit.c
+index ce252c9..102b7c4 100644
+--- a/dwarves_emit.c
++++ b/dwarves_emit.c
+@@ -351,6 +351,8 @@ static int tag__emit_definitions(struct tag *tag, struct cu *cu,
+ next_indirection:
+ 	switch (type->tag) {
+ 	case DW_TAG_base_type:
++		if (emissions->conf_fprintf && emissions->conf_fprintf->skip_emitting_atomic_typedefs)
++			return 0;
+ 		return base_type__emit_definitions(tag__base_type(type), emissions, fp);
+ 	case DW_TAG_pointer_type:
+ 	case DW_TAG_reference_type:
+-- 
+2.40.0.rc2
+

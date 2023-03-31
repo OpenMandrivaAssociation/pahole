@@ -1,0 +1,39 @@
+From a4f3a79da8d4ed8b8199d98241c387c3f7684df3 Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Tue, 11 Oct 2022 16:27:18 -0300
+Subject: [PATCH 17/55] emit: cu__type() == NULL means "void"
+
+Fix it to cope with:
+
+typedef void foo;
+
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ dwarves_emit.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/dwarves_emit.c b/dwarves_emit.c
+index dec446d..bbfc840 100644
+--- a/dwarves_emit.c
++++ b/dwarves_emit.c
+@@ -155,7 +155,8 @@ static int typedef__emit_definitions(struct tag *tdef, struct cu *cu,
+ 	}
+ 
+ 	type = cu__type(cu, tdef->type);
+-	tag__assert_search_result(type, tdef->tag, type__name(def));
++	if (type == NULL) // void
++		goto emit;
+ 
+ 	switch (type->tag) {
+ 	case DW_TAG_array_type:
+@@ -215,6 +216,7 @@ static int typedef__emit_definitions(struct tag *tdef, struct cu *cu,
+ 	 * will thus be emitted before the function typedef, making a no go to
+ 	 * redefine the typedef after struct __wait_queue.
+ 	 */
++emit:
+ 	if (!def->definition_emitted) {
+ 		typedef__fprintf(tdef, cu, NULL, fp);
+ 		fputs(";\n", fp);
+-- 
+2.40.0.rc2
+

@@ -1,0 +1,114 @@
+From 2bb968b567011f8a3e47706dc11c2a6ec442352c Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Fri, 26 Aug 2022 13:18:26 -0300
+Subject: [PATCH 01/55] btf: Fix building with system libbpf
+
+Where we may not have newer things, like BTF_KIND_ENUM64.
+
+So we're now again building with -DLIBBPF_EMBEDDED=Off.
+
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ btf_encoder.c | 27 +++++++++++++++++++++++++--
+ btf_loader.c  |  7 +++++++
+ dutil.h       |  4 ++++
+ 3 files changed, 36 insertions(+), 2 deletions(-)
+
+diff --git a/btf_encoder.c b/btf_encoder.c
+index daa8e3b..51d9897 100644
+--- a/btf_encoder.c
++++ b/btf_encoder.c
+@@ -9,12 +9,12 @@
+   Copyright (C) Red Hat Inc
+  */
+ 
++#include <linux/btf.h>
+ #include "dwarves.h"
+ #include "elf_symtab.h"
+ #include "btf_encoder.h"
+ #include "gobuffer.h"
+ 
+-#include <linux/btf.h>
+ #include <bpf/btf.h>
+ #include <bpf/libbpf.h>
+ #include <ctype.h> /* for isalpha() and isalnum() */
+@@ -124,7 +124,7 @@ static int btf_var_secinfo_cmp(const void *a, const void *b)
+ #define BITS_ROUNDDOWN_BYTES(bits) ((bits) >> 3)
+ #define BITS_ROUNDUP_BYTES(bits) (BITS_ROUNDDOWN_BYTES(bits) + !!BITS_PER_BYTE_MASKED(bits))
+ 
+-static const char * const btf_kind_str[NR_BTF_KINDS] = {
++static const char * const btf_kind_str[] = {
+ 	[BTF_KIND_UNKN]		= "UNKNOWN",
+ 	[BTF_KIND_INT]		= "INT",
+ 	[BTF_KIND_PTR]		= "PTR",
+@@ -491,6 +491,29 @@ static int32_t btf_encoder__add_struct(struct btf_encoder *encoder, uint8_t kind
+ 	return id;
+ }
+ 
++#if LIBBPF_MAJOR_VERSION < 1
++static inline int libbpf_err(int ret)
++{
++        if (ret < 0)
++                errno = -ret;
++        return ret;
++}
++
++static
++int btf__add_enum64(struct btf *btf __maybe_unused, const char *name __maybe_unused,
++		    __u32 byte_sz __maybe_unused, bool is_signed __maybe_unused)
++{
++	return  libbpf_err(-ENOTSUP);
++}
++
++static
++int btf__add_enum64_value(struct btf *btf __maybe_unused, const char *name __maybe_unused,
++			  __u64 value __maybe_unused)
++{
++	return  libbpf_err(-ENOTSUP);
++}
++#endif
++
+ static int32_t btf_encoder__add_enum(struct btf_encoder *encoder, const char *name, struct type *etype,
+ 				     struct conf_load *conf_load)
+ {
+diff --git a/btf_loader.c b/btf_loader.c
+index 406a007..69b63a5 100644
+--- a/btf_loader.c
++++ b/btf_loader.c
+@@ -312,6 +312,7 @@ out_free:
+ 	return -ENOMEM;
+ }
+ 
++#if LIBBPF_MAJOR_VERSION >= 1
+ static struct enumerator *enumerator__new64(const char *name, uint64_t value)
+ {
+ 	struct enumerator *en = tag__alloc(sizeof(*en));
+@@ -354,6 +355,12 @@ out_free:
+ 	enumeration__delete(enumeration);
+ 	return -ENOMEM;
+ }
++#else
++static int create_new_enumeration64(struct cu *cu __maybe_unused, const struct btf_type *tp __maybe_unused, uint32_t id __maybe_unused)
++{
++	return -ENOTSUP;
++}
++#endif
+ 
+ static int create_new_subroutine_type(struct cu *cu, const struct btf_type *tp, uint32_t id)
+ {
+diff --git a/dutil.h b/dutil.h
+index e45bba0..335a17c 100644
+--- a/dutil.h
++++ b/dutil.h
+@@ -344,4 +344,8 @@ void __zfree(void **ptr);
+ 
+ #define zfree(ptr) __zfree((void **)(ptr))
+ 
++#ifndef BTF_KIND_ENUM64
++#define BTF_KIND_ENUM64 19
++#endif
++
+ #endif /* _DUTIL_H_ */
+-- 
+2.40.0.rc2
+

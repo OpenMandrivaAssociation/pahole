@@ -1,0 +1,31 @@
+From 02d67c51765dfbd5893087da63744c864c7cc9e0 Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Mon, 24 Oct 2022 11:25:44 -0300
+Subject: [PATCH 28/55] pfunct: Use zalloc() to make the code more robust
+
+Recently we had a problem where it was assumed that a field was
+initialized to zeros but the constructor was using malloc(), check all
+use and switch the ones allocating structs to zalloc() to prevent such
+problems if we add extra fields to those structs.
+
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ pfunct.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pfunct.c b/pfunct.c
+index f42bdd1..5d34bc5 100644
+--- a/pfunct.c
++++ b/pfunct.c
+@@ -53,7 +53,7 @@ struct fn_stats {
+ 
+ static struct fn_stats *fn_stats__new(struct tag *tag, const struct cu *cu)
+ {
+-	struct fn_stats *stats = malloc(sizeof(*stats));
++	struct fn_stats *stats = zalloc(sizeof(*stats));
+ 
+ 	if (stats != NULL) {
+ 		const struct function *fn = tag__function(tag);
+-- 
+2.40.0.rc2
+

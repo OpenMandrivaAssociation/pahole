@@ -1,0 +1,92 @@
+From f5857bd34b220a64eb343a84e21f3c8e11cd9ec7 Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Fri, 23 Sep 2022 14:06:31 -0300
+Subject: [PATCH 02/55] pahole: Honour --compile when -C is used
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+I.e. generate types recursively from some specified types, now this
+works:
+
+⬢[acme@toolbox pahole]$ pahole --compile spinlock
+typedef struct {
+	int                        counter;              /*     0     4 */
+
+	/* size: 4, cachelines: 1, members: 1 */
+	/* last cacheline: 4 bytes */
+} atomic_t;
+
+typedef unsigned char __u8;
+typedef __u8 u8;
+
+typedef short unsigned int __u16;
+typedef __u16 u16;
+
+struct qspinlock {
+	union {
+		atomic_t           val;                  /*     0     4 */
+		struct {
+			u8         locked;               /*     0     1 */
+			u8         pending;              /*     1     1 */
+		};                                       /*     0     2 */
+		struct {
+			u16        locked_pending;       /*     0     2 */
+			u16        tail;                 /*     2     2 */
+		};                                       /*     0     4 */
+	};                                               /*     0     4 */
+
+	/* size: 4, cachelines: 1, members: 1 */
+	/* last cacheline: 4 bytes */
+};
+typedef struct qspinlock arch_spinlock_t;
+
+struct raw_spinlock {
+	arch_spinlock_t            raw_lock;             /*     0     4 */
+
+	/* size: 4, cachelines: 1, members: 1 */
+	/* last cacheline: 4 bytes */
+};
+
+struct spinlock {
+	union {
+		struct raw_spinlock rlock;               /*     0     4 */
+	};                                               /*     0     4 */
+
+	/* size: 4, cachelines: 1, members: 1 */
+	/* last cacheline: 4 bytes */
+};
+
+⬢[acme@toolbox pahole]$
+
+  ------
+
+When not using --compile this ends up calling tag__fprintf() as
+formatter is set to class_formatter() that calls tag__fprintf() if
+compilable isn't set.
+
+Cc: Adrian Moreno <amorenoz@redhat.com>
+Cc: Arnaldo Melo <acme@redhat.com>
+Cc: Eelco Chaudron <echaudro@redhat.com>
+Cc: Flavio Leitner <fbl@redhat.com>,
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ pahole.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pahole.c b/pahole.c
+index e87d9a4..9d9bf47 100644
+--- a/pahole.c
++++ b/pahole.c
+@@ -3217,7 +3217,7 @@ out_btf:
+ 			 * We don't need to print it for every compile unit
+ 			 * but the previous options need
+ 			 */
+-			tag__fprintf(class, cu, &conf, stdout);
++			formatter(tag__class(class), cu, class_id);
+ 			putchar('\n');
+ 		}
+ 	}
+-- 
+2.40.0.rc2
+

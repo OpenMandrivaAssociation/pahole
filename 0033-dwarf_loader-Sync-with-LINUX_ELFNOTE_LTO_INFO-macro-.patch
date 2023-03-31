@@ -1,0 +1,81 @@
+From 45c044860c2abce78b888800cc1dafe005123221 Mon Sep 17 00:00:00 2001
+From: Sedat Dilek <sedat.dilek@gmail.com>
+Date: Fri, 20 Jan 2023 21:12:03 +0100
+Subject: [PATCH 33/55] dwarf_loader: Sync with LINUX_ELFNOTE_LTO_INFO macro
+ from kernel
+
+As long as I am using CONFIG_DEBUG_INFO_BTF=y with LLVM/Clang
+I have noticed the below macros where defined unconsistently.
+
+See here pahole latest Git...
+
+[ pahole:dwarf_loader ]
+
+  /* Match the define in linux:include/linux/elfnote.h */
+  #define LINUX_ELFNOTE_BUILD_LTO                0x101
+
+...and latest Linus v6.2-rc4+ Git:
+
+[ linux:include/linux/elfnote-lto.h ]
+
+  #define LINUX_ELFNOTE_LTO_INFO         0x101
+
+Yonghong Song says:
+
+> Ya, LINUX_ELFNOTE_BUILD_LTO is initially proposed macro name but later
+> the formal kernel patch used LINUX_ELFNOTE_LTO_INFO. Could you submit
+> a pahole for this so it is consistent with kernel? Thanks!
+
+Fix this by syncing the pahole macro with the one from linux-kernel.
+
+Suggested-by: Yonghong Song <yhs@meta.com>
+Signed-off-by: Sedat Dilek <sedat.dilek@gmail.com>
+Cc: Alexei Starovoitov <ast@kernel.org>
+Cc: Andrii Nakryiko <andrii@kernel.org>
+Cc: Daniel Borkmann <daniel@iogearbox.net>
+Cc: Hao Luo <haoluo@google.com>
+Cc: Jiri Olsa <jolsa@kernel.org>
+Cc: John Fastabend <john.fastabend@gmail.com>
+Cc: KP Singh <kpsingh@kernel.org>
+Cc: Martin KaFai Lau <martin.lau@linux.dev>
+Cc: Nathan Chancellor <natechancellor@gmail.com>
+Cc: Nick Desaulniers <ndesaulniers@google.com>
+Cc: Song Liu <song@kernel.org>
+Cc: Stanislav Fomichev <sdf@google.com>
+Cc: Tom Rix <trix@redhat.com>
+Cc: Yonghong Song <yhs@fb.com>
+Cc: bpf@vger.kernel.org
+Cc: llvm@lists.linux.dev
+Link: http://lore.kernel.org/bpf/b4182459-3fcb-e3d4-09ba-69039a0bdbca@meta.com
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ dwarf_loader.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/dwarf_loader.c b/dwarf_loader.c
+index 7a6a9f8..eece107 100644
+--- a/dwarf_loader.c
++++ b/dwarf_loader.c
+@@ -2814,8 +2814,8 @@ static int __cus__load_debug_types(struct conf_load *conf, Dwfl_Module *mod, Dwa
+ 	return 0;
+ }
+ 
+-/* Match the define in linux:include/linux/elfnote.h */
+-#define LINUX_ELFNOTE_BUILD_LTO		0x101
++/* Match the define in linux:include/linux/elfnote-lto.h */
++#define LINUX_ELFNOTE_LTO_INFO		0x101
+ 
+ static bool cus__merging_cu(Dwarf *dw, Elf *elf)
+ {
+@@ -2833,7 +2833,7 @@ static bool cus__merging_cu(Dwarf *dw, Elf *elf)
+ 			size_t name_off, desc_off, offset = 0;
+ 			GElf_Nhdr hdr;
+ 			while ((offset = gelf_getnote(data, offset, &hdr, &name_off, &desc_off)) != 0) {
+-				if (hdr.n_type != LINUX_ELFNOTE_BUILD_LTO)
++				if (hdr.n_type != LINUX_ELFNOTE_LTO_INFO)
+ 					continue;
+ 
+ 				/* owner is Linux */
+-- 
+2.40.0.rc2
+

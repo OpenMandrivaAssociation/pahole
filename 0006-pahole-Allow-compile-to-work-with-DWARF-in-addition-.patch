@@ -1,0 +1,130 @@
+From b84120772df33f93efeac1206be545311e04cad1 Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Tue, 27 Sep 2022 11:39:27 -0300
+Subject: [PATCH 06/55] pahole: Allow --compile to work with DWARF in addition
+ to with BTF
+
+The recent changes allow for that.
+
+Generating a type in openvswitch and all it needs, recursively, from the
+DWARF info for that project, then printing it out from the compileable
+pahole output does a full circle and gets us back with the types pahole
+generated from DWARF:
+
+  $ pahole -C ovsrec_ssl --compile /usr/lib/debug/.dwz/openvswitch-2.17.0-3.fc36.x86_64 > ovs.c ; echo "static struct ovsrec_ssl foo;" >> ovs.c ; gcc -g -c ovs.c
+  $ file ovs.o
+  ovs.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), with debug_info, not stripped
+  $ pahole ovs.o
+  struct hmap_node {
+  	size_t                     hash;                 /*     0     8 */
+  	struct hmap_node *         next;                 /*     8     8 */
+
+  	/* size: 16, cachelines: 1, members: 2 */
+  	/* last cacheline: 16 bytes */
+  };
+  struct uuid {
+  	uint32_t                   parts[4];             /*     0    16 */
+
+  	/* size: 16, cachelines: 1, members: 1 */
+  	/* last cacheline: 16 bytes */
+  };
+  struct ovs_list {
+  	struct ovs_list *          prev;                 /*     0     8 */
+  	struct ovs_list *          next;                 /*     8     8 */
+
+  	/* size: 16, cachelines: 1, members: 2 */
+  	/* last cacheline: 16 bytes */
+  };
+  struct ovsdb_idl_row {
+  	struct hmap_node           hmap_node;            /*     0    16 */
+  	struct uuid                uuid;                 /*    16    16 */
+  	struct ovs_list            src_arcs;             /*    32    16 */
+  	struct ovs_list            dst_arcs;             /*    48    16 */
+  	/* --- cacheline 1 boundary (64 bytes) --- */
+  	struct ovsdb_idl_table *   table;                /*    64     8 */
+  	struct ovsdb_datum *       old_datum;            /*    72     8 */
+  	_Bool                      parsed;               /*    80     1 */
+
+  	/* XXX 7 bytes hole, try to pack */
+
+  	struct ovs_list            reparse_node;         /*    88    16 */
+  	struct ovsdb_datum *       new_datum;            /*   104     8 */
+  	long unsigned int *        prereqs;              /*   112     8 */
+  	long unsigned int *        written;              /*   120     8 */
+  	/* --- cacheline 2 boundary (128 bytes) --- */
+  	struct hmap_node           txn_node;             /*   128    16 */
+  	long unsigned int *        map_op_written;       /*   144     8 */
+  	struct map_op_list * *     map_op_lists;         /*   152     8 */
+  	long unsigned int *        set_op_written;       /*   160     8 */
+  	struct set_op_list * *     set_op_lists;         /*   168     8 */
+  	unsigned int               change_seqno[3];      /*   176    12 */
+
+  	/* XXX 4 bytes hole, try to pack */
+
+  	/* --- cacheline 3 boundary (192 bytes) --- */
+  	struct ovs_list            track_node;           /*   192    16 */
+  	long unsigned int *        updated;              /*   208     8 */
+  	struct ovsdb_datum *       tracked_old_datum;    /*   216     8 */
+
+  	/* size: 224, cachelines: 4, members: 20 */
+  	/* sum members: 213, holes: 2, sum holes: 11 */
+  	/* last cacheline: 32 bytes */
+  };
+  struct hmap {
+  	struct hmap_node * *       buckets;              /*     0     8 */
+  	struct hmap_node *         one;                  /*     8     8 */
+  	size_t                     mask;                 /*    16     8 */
+  	size_t                     n;                    /*    24     8 */
+
+  	/* size: 32, cachelines: 1, members: 4 */
+  	/* last cacheline: 32 bytes */
+  };
+  struct smap {
+  	struct hmap                map;                  /*     0    32 */
+
+  	/* size: 32, cachelines: 1, members: 1 */
+  	/* last cacheline: 32 bytes */
+  };
+  struct ovsrec_ssl {
+  	struct ovsdb_idl_row       header_;              /*     0   224 */
+  	/* --- cacheline 3 boundary (192 bytes) was 32 bytes ago --- */
+  	_Bool                      bootstrap_ca_cert;    /*   224     1 */
+
+  	/* XXX 7 bytes hole, try to pack */
+
+  	char *                     ca_cert;              /*   232     8 */
+  	char *                     certificate;          /*   240     8 */
+  	struct smap                external_ids;         /*   248    32 */
+  	/* --- cacheline 4 boundary (256 bytes) was 24 bytes ago --- */
+  	char *                     private_key;          /*   280     8 */
+
+  	/* size: 288, cachelines: 5, members: 6 */
+  	/* sum members: 281, holes: 1, sum holes: 7 */
+  	/* last cacheline: 32 bytes */
+  };
+  $
+
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ pahole.c | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/pahole.c b/pahole.c
+index 9d9bf47..1f844e3 100644
+--- a/pahole.c
++++ b/pahole.c
+@@ -2999,11 +2999,6 @@ static enum load_steal_kind pahole_stealer(struct cu *cu,
+ {
+ 	int ret = LSK__DELETE;
+ 
+-	if (compilable && strcmp(cu->dfops->name, "btf")) {
+-		fprintf(stderr, "pahole: --compile currently only works with BTF.\n");
+-		return LSK__STOP_LOADING;
+-	}
+-
+ 	if (!cu__filter(cu))
+ 		goto filter_it;
+ 
+-- 
+2.40.0.rc2
+

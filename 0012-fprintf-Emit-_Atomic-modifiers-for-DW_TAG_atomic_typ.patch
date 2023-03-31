@@ -1,0 +1,146 @@
+From 56bcfa9135312ffea09ba5e948b81fa76eb76d39 Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Fri, 7 Oct 2022 11:56:16 -0300
+Subject: [PATCH 12/55] fprintf: Emit "_Atomic" modifiers for
+ DW_TAG_atomic_type
+
+  $ pahole -C ovs_barrier eelco/ovs-vswitchd_f35
+  struct ovs_barrier {
+          struct {
+                  _Atomic struct ovs_barrier_impl * p;     /*     0     8 */
+          } impl;                                          /*     0     8 */
+
+          /* size: 8, cachelines: 1, members: 1 */
+          /* last cacheline: 8 bytes */
+  };
+
+  $ pahole -C ovs_barrier_impl eelco/ovs-vswitchd_f35
+  struct ovs_barrier_impl {
+          uint32_t                   size;                 /*     0     4 */
+          atomic_count               count;                /*     4     4 */
+          struct seq *               seq;                  /*     8     8 */
+          struct ovs_refcount        refcnt;               /*    16     4 */
+
+          /* size: 24, cachelines: 1, members: 4 */
+          /* padding: 4 */
+          /* last cacheline: 24 bytes */
+  };
+
+  $ pahole -EC ovs_barrier_impl eelco/ovs-vswitchd_f35
+  struct ovs_barrier_impl {
+  	/* typedef uint32_t -> __uint32_t */ unsigned int               size;            /*     0     4 */
+  	/* typedef atomic_count */ struct atomic_count {
+  		/* typedef atomic_uint */ _Atomic unsigned int count;                    /*     4     4 */
+  	} count; /*     4     4 */
+  	struct seq *               seq;                                                  /*     8     8 */
+  	struct ovs_refcount {
+  		/* typedef atomic_uint */ _Atomic unsigned int count;                    /*    16     4 */
+  	}refcnt; /*    16     4 */
+
+  	/* size: 24, cachelines: 1, members: 4 */
+  	/* padding: 4 */
+  	/* last cacheline: 24 bytes */
+  };
+
+  $
+
+  And --compile works now with these files:
+
+  $ pahole --compile -C udpif eelco/ovs-vswitchd_f35 > updif.c ; echo "static struct udpif bla;" >> updif.c ; gcc -g -c updif.c ; file updif.o ; pahole -C udpif updif.o
+  updif.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), with debug_info, not stripped
+  struct udpif {
+          struct ovs_list            list_node;            /*     0    16 */
+          struct dpif *              dpif;                 /*    16     8 */
+          struct dpif_backer *       backer;               /*    24     8 */
+          struct handler *           handlers;             /*    32     8 */
+          uint32_t                   n_handlers;           /*    40     4 */
+
+          /* XXX 4 bytes hole, try to pack */
+
+          struct revalidator *       revalidators;         /*    48     8 */
+          uint32_t                   n_revalidators;       /*    56     4 */
+          struct latch               exit_latch;           /*    60     8 */
+
+          /* XXX 4 bytes hole, try to pack */
+
+          /* --- cacheline 1 boundary (64 bytes) was 8 bytes ago --- */
+          struct seq *               reval_seq;            /*    72     8 */
+          _Bool                      reval_exit;           /*    80     1 */
+
+          /* XXX 7 bytes hole, try to pack */
+
+          struct ovs_barrier         reval_barrier;        /*    88     8 */
+          struct dpif_flow_dump *    dump;                 /*    96     8 */
+          long long int              dump_duration;        /*   104     8 */
+          struct seq *               dump_seq;             /*   112     8 */
+          atomic_bool                enable_ufid;          /*   120     1 */
+          _Bool                      pause;                /*   121     1 */
+
+          /* XXX 2 bytes hole, try to pack */
+
+          struct latch               pause_latch;          /*   124     8 */
+
+          /* XXX 4 bytes hole, try to pack */
+
+          /* --- cacheline 2 boundary (128 bytes) was 8 bytes ago --- */
+          struct ovs_barrier         pause_barrier;        /*   136     8 */
+          struct umap *              ukeys;                /*   144     8 */
+          unsigned int               max_n_flows;          /*   152     4 */
+          unsigned int               avg_n_flows;          /*   156     4 */
+          atomic_uint                flow_limit;           /*   160     4 */
+          atomic_uint                n_flows;              /*   164     4 */
+          atomic_llong               n_flows_timestamp;    /*   168     8 */
+          struct ovs_mutex           n_flows_mutex;        /*   176    48 */
+          /* --- cacheline 3 boundary (192 bytes) was 32 bytes ago --- */
+          struct unixctl_conn * *    conns;                /*   224     8 */
+          uint64_t                   conn_seq;             /*   232     8 */
+          size_t                     n_conns;              /*   240     8 */
+          long long int              offload_rebalance_time; /*   248     8 */
+
+          /* size: 256, cachelines: 4, members: 29 */
+          /* sum members: 235, holes: 5, sum holes: 21 */
+  };
+
+  $
+
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ dwarves_fprintf.c | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/dwarves_fprintf.c b/dwarves_fprintf.c
+index a3193eb..5035f55 100644
+--- a/dwarves_fprintf.c
++++ b/dwarves_fprintf.c
+@@ -767,6 +767,8 @@ inner_struct:
+ 		tconf.suppress_offset_comment = suppress_offset_comment;
+ 	}
+ 
++	const char *modifier;
++
+ next_type:
+ 	switch (type->tag) {
+ 	case DW_TAG_pointer_type:
+@@ -808,10 +810,15 @@ print_default:
+ 		printed += ftype__fprintf(tag__ftype(type), cu, name, 0, 0,
+ 					  tconf.type_spacing, true, &tconf, fp);
+ 		break;
+-	case DW_TAG_const_type: {
+-		size_t const_printed = fprintf(fp, "%s ", "const");
+-		tconf.type_spacing -= const_printed;
+-		printed		   += const_printed;
++	case DW_TAG_atomic_type:
++		modifier = "_Atomic";
++		goto print_modifier;
++	case DW_TAG_const_type:
++		modifier = "const";
++print_modifier: {
++		size_t modifier_printed = fprintf(fp, "%s ", modifier);
++		tconf.type_spacing -= modifier_printed;
++		printed		   += modifier_printed;
+ 
+ 		struct tag *ttype = cu__type(cu, type->type);
+ 		if (ttype) {
+-- 
+2.40.0.rc2
+

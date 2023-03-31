@@ -1,0 +1,42 @@
+From 74f21ed08e4313f0a41c64f7b5d3dfbd87580d42 Mon Sep 17 00:00:00 2001
+From: Arnaldo Carvalho de Melo <acme@redhat.com>
+Date: Thu, 1 Dec 2022 14:46:28 -0300
+Subject: [PATCH 32/55] pahole: Set libbpf debug printer in -V mode
+
+Signed-off-by: Arnaldo Carvalho de Melo <acme@redhat.com>
+---
+ pahole.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/pahole.c b/pahole.c
+index 04b28c0..610a672 100644
+--- a/pahole.c
++++ b/pahole.c
+@@ -1181,6 +1181,13 @@ static void print_containers(struct cu *cu, uint32_t type, int ident)
+ 	}
+ }
+ 
++static int
++libbpf_print_all_levels(__maybe_unused enum libbpf_print_level level,
++			const char *format, va_list args)
++{
++	return vfprintf(stderr, format, args);
++}
++
+ /* Name and version of program.  */
+ ARGP_PROGRAM_VERSION_HOOK_DEF = dwarves_print_version;
+ 
+@@ -1704,7 +1711,9 @@ static error_t pahole__options_parser(int key, char *arg,
+ 		  formatter = NULL;			break;
+ 	case 't': separator = arg[0];			break;
+ 	case 'u': defined_in = 1;			break;
+-	case 'V': global_verbose = 1;			break;
++	case 'V': global_verbose = 1;
++		  libbpf_set_print(libbpf_print_all_levels);
++		  break;
+ 	case 'w': word_size = atoi(arg);		break;
+ 	case 'X': cu__exclude_prefix = arg;
+ 		  cu__exclude_prefix_len = strlen(cu__exclude_prefix);
+-- 
+2.40.0.rc2
+
