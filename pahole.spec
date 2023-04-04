@@ -4,13 +4,11 @@
 Summary:	Tool that shows data structure layouts encoded in debugging information
 Name:		pahole
 Version:	1.24
-Release:	6
+Release:	7
 Group:		Development/C
 License:	GPLv2+
 # https://git.kernel.org/pub/scm/devel/pahole/pahole.git
 Source0:	%{name}-%{version}.tar.gz
-# (revision id is from pahole's submodules) https://git.kernel.org/pub/scm/devel/pahole/pahole.git/log/lib
-Source1:	https://github.com/libbpf/libbpf/archive/6597330c45d185381900037f0130712cd326ae5.tar.gz
 # (tpg) upstream patches
 Patch100:	0000-core-Conditionally-define-language-encodings.patch
 Patch101:	0001-btf-Fix-building-with-system-libbpf.patch
@@ -50,7 +48,7 @@ Patch133:	0033-dwarf_loader-Sync-with-LINUX_ELFNOTE_LTO_INFO-macro-.patch
 Provides:	dwarves = %{EVRD}
 BuildRequires:	cmake
 BuildRequires:	ninja
-BuildRequires:	pkgconfig(libelf)
+BuildRequires:	pkgconfig(libbpf)
 
 %description
 pahole shows data structure layouts encoded in debugging information formats,
@@ -74,9 +72,9 @@ Development files for the dwarves library, a part of pahole
 
 %prep
 %autosetup -p1 -a 1
-rmdir lib/bpf
-mv libbpf-* lib/bpf
-%cmake -G Ninja
+%cmake \
+		-DLIBBPF_EMBEDDED=OFF \
+		-G Ninja
 
 %build
 %ninja_build -C build
