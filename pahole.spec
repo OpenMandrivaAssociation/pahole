@@ -3,7 +3,7 @@
 
 Summary:	Tool that shows data structure layouts encoded in debugging information
 Name:		pahole
-Version:	1.25
+Version:	1.27
 Release:	1
 Group:		Development/C
 License:	GPLv2+
