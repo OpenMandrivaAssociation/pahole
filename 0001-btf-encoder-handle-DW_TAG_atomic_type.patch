@@ -1,0 +1,26 @@
+From: OpenMandriva <bero@lindev.ch>
+Subject: [PATCH] btf_encoder: handle DW_TAG_atomic_type
+
+BTF has no atomic qualifier kind, so encode DW_TAG_atomic_type as
+BTF_KIND_CONST, the same as DW_TAG_const_type. This is consistent
+with how other type qualifiers without a direct BTF equivalent are
+handled, and avoids the "Unsupported DW_TAG_atomic_type" error when
+encoding modules that use C11 _Atomic (e.g. the NVIDIA open kernel
+modules).
+
+Signed-off-by: OpenMandriva <cooker@openmandriva.org>
+---
+ btf_encoder.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff -up pahole-1.27/btf_encoder.c.3~ pahole-1.27/btf_encoder.c
+--- pahole-1.27/btf_encoder.c.3~	2024-06-11 21:27:14.000000000 +0200
++++ pahole-1.27/btf_encoder.c	2026-05-31 02:40:13.922809363 +0200
+@@ -1203,6 +1203,7 @@ static int btf_encoder__encode_tag(struc
+ 		name = __base_type__name(bt);
+ 		return btf_encoder__add_base_type(encoder, bt, name);
+ 	case DW_TAG_const_type:
++	case DW_TAG_atomic_type:
+ 		return btf_encoder__add_ref_type(encoder, BTF_KIND_CONST, ref_type_id, NULL, false);
+ 	case DW_TAG_pointer_type:
+ 		return btf_encoder__add_ref_type(encoder, BTF_KIND_PTR, ref_type_id, NULL, false);

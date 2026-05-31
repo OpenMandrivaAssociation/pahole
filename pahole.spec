@@ -4,7 +4,7 @@
 Summary:	Tool that shows data structure layouts encoded in debugging information
 Name:		pahole
 Version:	1.27
-Release:	2
+Release:	3
 Group:		Development/C
 License:	GPLv2+
 # https://git.kernel.org/pub/scm/devel/pahole/pahole.git
@@ -19,6 +19,8 @@ BuildRequires:	pkgconfig(libbpf)
 # Patches from upstream's upstream, needed for building kernels with clang+LTO
 https://github.com/acmel/dwarves/commit/6a2b27c0f512619b0e7a769a18a0fb05bb3789a5.patch
 https://github.com/acmel/dwarves/commit/94a01bde592c555b3eb526aeb4c2ad695c5660d8.patch
+# Needed for building the nvidia driver in-tree, since it uses _Atomic
+0001-btf-encoder-handle-DW_TAG_atomic_type.patch
 
 %description
 pahole shows data structure layouts encoded in debugging information formats,
